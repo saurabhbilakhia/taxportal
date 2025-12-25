@@ -1,0 +1,66 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clientportal-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/clientportal
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - JWT_SECRET=your-256-bit-secret-key-for-jwt-signing-min-32-chars
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-sk_test_placeholder}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      - UPLOAD_DIR=/app/uploads
+      # Nanonets Configuration
+      - NANONETS_API_KEY=${NANONETS_API_KEY:-}
+      - NANONETS_MODEL_ID=${NANONETS_MODEL_ID:-}
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8080}
+      # Notification Configuration
+      - NOTIFICATION_ENABLED=${NOTIFICATION_ENABLED:-true}
+      - ACCOUNTANT_EMAIL=${ACCOUNTANT_EMAIL:-accountant@example.com}
+      - FROM_EMAIL=${FROM_EMAIL:-noreply@taxportal.com}
+      # SMTP Configuration (optional)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - clientportal-network
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: clientportal-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=clientportal
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - clientportal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clientportal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads:
+
+networks:
+  clientportal-network:
+    driver: bridge

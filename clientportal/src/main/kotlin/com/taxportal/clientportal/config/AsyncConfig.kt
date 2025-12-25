@@ -1,0 +1,34 @@
+package com.taxportal.clientportal.config
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.scheduling.annotation.EnableAsync
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+import java.util.concurrent.Executor
+
+@Configuration
+@EnableAsync
+class AsyncConfig {
+
+    @Bean(name = ["extractionExecutor"])
+    fun extractionExecutor(): Executor {
+        val executor = ThreadPoolTaskExecutor()
+        executor.corePoolSize = 2
+        executor.maxPoolSize = 5
+        executor.queueCapacity = 100
+        executor.setThreadNamePrefix("extraction-")
+        executor.initialize()
+        return executor
+    }
+
+    @Bean(name = ["notificationExecutor"])
+    fun notificationExecutor(): Executor {
+        val executor = ThreadPoolTaskExecutor()
+        executor.corePoolSize = 2
+        executor.maxPoolSize = 5
+        executor.queueCapacity = 100
+        executor.setThreadNamePrefix("notification-")
+        executor.initialize()
+        return executor
+    }
+}

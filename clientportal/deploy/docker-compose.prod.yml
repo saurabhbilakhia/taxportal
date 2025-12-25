@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/tax-portal-frontend:${TAG:-latest}
+    container_name: taxportal-frontend
+    restart: unless-stopped
+    networks:
+      - clientportal-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/tax-portal-backend:${TAG:-latest}
+    container_name: clientportal-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - NANONETS_API_KEY=${NANONETS_API_KEY}
+      - NANONETS_MODEL_ID=${NANONETS_MODEL_ID}
+      - NANONETS_WEBHOOK_URL=https://${DOMAIN}/api/v1/webhooks/nanonets
+      - APP_BASE_URL=https://${DOMAIN}
+      - SPRING_MAIL_HOST=${SMTP_HOST}
+      - SPRING_MAIL_PORT=${SMTP_PORT:-587}
+      - SPRING_MAIL_USERNAME=${SMTP_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SMTP_PASSWORD}
+      - APP_NOTIFICATION_FROM_EMAIL=${FROM_EMAIL}
+      - APP_NOTIFICATION_ACCOUNTANT_EMAIL=${ACCOUNTANT_EMAIL}
+      - UPLOAD_DIR=/app/uploads
+      - CORS_ALLOWED_ORIGINS=https://${DOMAIN}
+    volumes:
+      - uploads:/app/uploads
+    networks:
+      - clientportal-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:16-alpine
+    container_name: clientportal-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - clientportal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: clientportal-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    networks:
+      - clientportal-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: clientportal-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  clientportal-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  uploads:
