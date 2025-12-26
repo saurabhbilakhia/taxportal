@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/shared';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function UnauthorizedPage() {
   const { user, logout } = useAuth();

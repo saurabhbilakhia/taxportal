@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { Button, Input, Card } from '../../components/shared';
 import { clientRegisterSchema, type ClientRegisterFormData } from '../../utils/validators';
 import type { AxiosError } from 'axios';

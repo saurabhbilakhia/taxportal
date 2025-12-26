@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { ordersApi } from '../../api/orders';
 import { Card, Button, OrderStatusBadge, LoadingSpinner, ErrorState } from '../../components/shared';
 import { formatDate } from '../../utils/formatters';
